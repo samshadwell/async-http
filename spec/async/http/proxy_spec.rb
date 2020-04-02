@@ -204,14 +204,14 @@ RSpec.shared_examples_for Async::HTTP::Proxy do
 	end
 end
 
-RSpec.describe Async::HTTP::Protocol::HTTP10 do
-	it_behaves_like Async::HTTP::Proxy
-end
+# RSpec.describe Async::HTTP::Protocol::HTTP10 do
+# 	it_behaves_like Async::HTTP::Proxy
+# end
+# 
+# RSpec.describe Async::HTTP::Protocol::HTTP11 do
+# 	it_behaves_like Async::HTTP::Proxy
+# end
 
-RSpec.describe Async::HTTP::Protocol::HTTP11 do
-	it_behaves_like Async::HTTP::Proxy
-end
-
-RSpec.describe Async::HTTP::Protocol::HTTP2 do
+RSpec.describe Async::HTTP::Protocol::HTTP2, timeout: nil do
 	it_behaves_like Async::HTTP::Proxy
 end

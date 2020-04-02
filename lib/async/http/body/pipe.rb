@@ -23,6 +23,7 @@
 require_relative 'writable'
 
 require 'forwardable'
+require 'delegate'
 
 module Async
 	module HTTP
@@ -30,13 +31,14 @@ module Async
 			class Pipe
 				extend Forwardable
 				
+				# If the input stream is closed first, it's likely the output stream will also be closed.
 				def initialize(input, output = Writable.new, task: Task.current)
 					@input = input
 					@output = output
 					
 					head, tail = IO::Socket.pair(Socket::AF_UNIX, Socket::SOCK_STREAM)
 					
-					@head = Async::IO::Stream.new(head)
+					@head = IO::Stream.new(head)
 					@tail = tail
 					
 					@reader = nil
@@ -67,11 +69,18 @@ module Async
 					
 					while chunk = @input.read
 						@head.write(chunk)
-						@head.flush
+						begin
+							@head.flush
+						rescue Errno::EPIPE
+							Async.logger.info(self) {chunk.inspect}
+							raise
+						end
 					end
 					
 					@head.close_write
 				ensure
+					Async.logger.info(self) {"reader exiting"}
+					
 					@reader = nil
 					@input.close($!)
 					
@@ -89,9 +98,14 @@ module Async
 						@output.write(chunk)
 					end
 				ensure
+					Async.logger.info(self) {"writer exiting chunk=#{chunk.inspect} @head=#{@head}"}
+					
 					@writer = nil
+					
+					Async.logger.info(self) {"#{@output}.close(#{$!})"}
 					@output.close($!)
 					
+					Async.logger.info(self) {"#{@head}.close if #{@reader}.nil?"}
 					@head.close if @reader.nil?
 				end
 			end
